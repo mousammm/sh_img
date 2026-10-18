@@ -1,7 +1,8 @@
 #include <stdio.h>
 
+#define SH_IMG_VIEW_SDL2 
 #define SH_IMAGE_IMPLEMENTATION
-#include "./vendor/sh_img.h"
+#include "./sh_img.h"
 
 int main(int argc, char** argv) {
   if (argc < 2) {
@@ -15,11 +16,13 @@ int main(int argc, char** argv) {
   int total_pixels = my_img->width * my_img->height;
   for (int i = 0; i < total_pixels; i++) {
     unsigned char* pixel_bytes = (unsigned char*)&my_img->pixels[i];
-    pixel_bytes[1] = 0; 
+    pixel_bytes[2] = 0; 
   }
 
   printf("\nIMG Saved.\n");
   sh_export_image(my_img, "img", SH_FORMAT_PNG);
+
+  sh_image_view_sdl2(my_img, "");
 
   sh_free_image(my_img);
   return 0;

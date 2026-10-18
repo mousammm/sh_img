@@ -1,24 +1,30 @@
 /*
-    #define SH_IMPLEMENTATION
-    #include "./sh_img.h"
+  INSTALL SCRIPT:
+    https://raw.githubusercontent.com/mousammm/sh_img/refs/heads/main/sh_img.h
+    wget https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_image.h
+    wget https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_image_write.h
 
-    // load the image
-    SH_IMG* my_img = sh_load_image("image.png");
+#define SH_IMG_VIEW_SDL2 
+#define SH_IMAGE_IMPLEMENTATION
+#include "./sh_img.h"
 
-    int total_pixels = my_img->width * my_img->height;
-    for (int i = 0; i < total_pixels; i++) {
-      unsigned char* pixel_bytes = (unsigned char*)&my_img->pixels[i];
-      pixel_bytes[0] = 0; 
-    }
+int main(void) {
+  SH_IMG* my_img = sh_load_image("input_img.png");
 
-    // export the image
-    sh_export_image(my_img, "img", SH_FORMAT_PNG);
+  int total_pixels = my_img->width * my_img->height;
+  for (int i = 0; i < total_pixels; i++) {
+    unsigned char* pixel_bytes = (unsigned char*)&my_img->pixels[i];
+    pixel_bytes[2] = 0; 
+  }
 
-    // img cleanup
-    sh_free_image(my_img);
+  sh_export_image(my_img, "output_img", SH_FORMAT_PNG);
+  sh_image_view_sdl2(my_img, "");
+  sh_free_image(my_img);
+
+  return 0;
+}
 
   ALL the function of <sh_img.h>
-
     SH_IMG* sh_load_image(const char* file_name);
     void sh_set_pixel(SH_IMG* img, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
     bool sh_export_image(SH_IMG* img, const char* base_name, SH_IMG_FORMAT format);
@@ -51,6 +57,10 @@ SH_IMG* sh_load_image(const char* file_name);
 void sh_set_pixel(SH_IMG* img, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
 bool sh_export_image(SH_IMG* img, const char* base_name, SH_IMG_FORMAT format);
 void sh_free_image(SH_IMG* img);
+
+#ifdef SH_IMG_VIEW_SDL2
+void sh_image_view_sdl2(const SH_IMG* img, const char* window_title);
+#endif
 
 #endif 
 
@@ -182,4 +192,70 @@ void sh_free_image(SH_IMG* img) {
   }
 }
 
-#endif
+#ifdef SH_IMG_VIEW_SDL2
+#include <SDL2/SDL.h>
+
+void sh_image_view_sdl2(const SH_IMG* img, const char* window_title) {
+  if (!img || !img->pixels) return;
+
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    return;
+  }
+
+  // Spin up window exact sized to the loaded image width & height
+  SDL_Window* window = SDL_CreateWindow(
+    window_title ? window_title : "Image Viewer",
+    SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    img->width, img->height, 0
+  );
+  
+  SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  SDL_Texture* texture = SDL_CreateTexture(
+    renderer, 
+    SDL_PIXELFORMAT_ARGB8888, 
+    SDL_TEXTUREACCESS_STREAMING, 
+    img->width, img->height
+  );
+
+  // Create and fill frame buffer converting standard pixel array mapping
+  uint32_t* display_buffer = (uint32_t*)malloc(img->width * img->height * sizeof(uint32_t));
+  if (display_buffer) {
+    int total_pixels = img->width * img->height;
+    for (int i = 0; i < total_pixels; i++) {
+      unsigned char* c = (unsigned char*)&img->pixels[i];
+      // Format to 0xAARRGGBB
+      display_buffer[i] = (c[3] << 24) | (c[0] << 16) | (c[1] << 8) | c[2];
+    }
+
+    // Push directly onto textures
+    SDL_UpdateTexture(texture, NULL, display_buffer, img->width * sizeof(uint32_t));
+    free(display_buffer);
+  }
+
+  // Local event checking frame loop (Blocks main execution dynamically)
+  bool close_viewer = false;
+  SDL_Event ev;
+  while (!close_viewer) {
+    while (SDL_PollEvent(&ev)) {
+      if (ev.type == SDL_QUIT || 
+        (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_ESCAPE)) {
+        close_viewer = true;
+      }
+    }
+
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+    SDL_Delay(16);
+  }
+
+  // Immediate local scope teardown
+  SDL_DestroyTexture(texture);
+  SDL_DestroyRenderer(renderer);
+  SDL_DestroyWindow(window);
+  SDL_Quit();
+}
+#endif // SH_IMG_VIEW_SDL2
+
+#endif // SH_IMAGE_IMPLEMENTATION
