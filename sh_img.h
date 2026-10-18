@@ -1,34 +1,36 @@
 /*
-  INSTALL SCRIPT:
+  INSTALL:
     https://raw.githubusercontent.com/mousammm/sh_img/refs/heads/main/sh_img.h
     wget https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_image.h
     wget https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_image_write.h
 
-#define SH_IMG_VIEW_SDL2 
-#define SH_IMAGE_IMPLEMENTATION
-#include "./sh_img.h"
+  USAGE:
+    #define SH_IMG_VIEW_SDL2 
+    #define SH_IMAGE_IMPLEMENTATION
+    #include "./sh_img.h"
+    
+    int main(void) {
+      SH_IMG* my_img = sh_load_image("input_img.png");
+    
+      int total_pixels = my_img->width * my_img->height;
+      for (int i = 0; i < total_pixels; i++) {
+        unsigned char* pixel_bytes = (unsigned char*)&my_img->pixels[i];
+        pixel_bytes[2] = 0; 
+      }
+    
+      sh_export_image(my_img, "output_img", SH_FORMAT_PNG);
+      sh_image_view_sdl2(my_img, "");
+      sh_free_image(my_img);
+    
+      return 0;
+    }
 
-int main(void) {
-  SH_IMG* my_img = sh_load_image("input_img.png");
-
-  int total_pixels = my_img->width * my_img->height;
-  for (int i = 0; i < total_pixels; i++) {
-    unsigned char* pixel_bytes = (unsigned char*)&my_img->pixels[i];
-    pixel_bytes[2] = 0; 
-  }
-
-  sh_export_image(my_img, "output_img", SH_FORMAT_PNG);
-  sh_image_view_sdl2(my_img, "");
-  sh_free_image(my_img);
-
-  return 0;
-}
-
-  ALL the function of <sh_img.h>
+  FUNCTION's <SH_IMG.H>:
     SH_IMG* sh_load_image(const char* file_name);
     void sh_set_pixel(SH_IMG* img, int x, int y, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
     bool sh_export_image(SH_IMG* img, const char* base_name, SH_IMG_FORMAT format);
     void sh_free_image(SH_IMG* img);
+    void sh_image_view_sdl2(const SH_IMG* img, const char* window_title);
 */
 
 #ifndef SH_IMG_HEADER
